@@ -1,0 +1,12 @@
+﻿# Fichiers privés / volumineux
+*.docx
+*.doc
+
+# Données locales et secrets
+data/
+.streamlit/secrets.toml
+
+# Environnement & caches
+.venv/
+__pycache__/
+*.pyc
