@@ -1,37 +1,39 @@
 import streamlit as st
 import pandas as pd
 from pathlib import Path
+import os
 
-# --- Config (idéalement en tout premier) ---
+# --- Config ---
 st.set_page_config(page_title="Emploi du temps", layout="wide")
 
 # --- Secrets & verrou d'édition ---
-try:
-    APP_PASSWORD = st.secrets["APP_PASSWORD"]
-except Exception:
-    st.error(
-        "Secret `APP_PASSWORD` introuvable.\n\n"
-        "En local : crée `.streamlit/secrets.toml` avec `APP_PASSWORD=\"edt2025\"`.\n"
-        "Sur Streamlit Cloud : Settings → Secrets → APP_PASSWORD."
-    )
-    st.stop()
+APP_PASSWORD = st.secrets.get("APP_PASSWORD") or os.environ.get("APP_PASSWORD") or "edt2025"
 
 if "unlocked" not in st.session_state:
     st.session_state.unlocked = False
 
 if not st.session_state.unlocked:
-    pwd = st.text_input("Mot de passe", type="password")
-    if pwd:  # on ne montre l'erreur que si l'utilisateur a saisi quelque chose
+    with st.form("lock_form", clear_on_submit=False):
+        pwd = st.text_input("Mot de passe", type="password", placeholder="••••••")
+        ok = st.form_submit_button("Déverrouiller")
+
+    if ok:
         if pwd == APP_PASSWORD:
             st.session_state.unlocked = True
             st.success("Édition déverrouillée ✅")
+            try:
+                st.rerun()
+            except Exception:
+                st.experimental_rerun()
         else:
-            st.error("Mot de passe incorrect ❌")
+            if pwd:  # pas d'erreur si champ vide
+                st.error("Mot de passe incorrect ❌")
+
     st.stop()
 
+# --- App principale ---
 st.title("📅 Emploi du temps interactif — Semaine par semaine")
 
-# --- Données ---
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
 
