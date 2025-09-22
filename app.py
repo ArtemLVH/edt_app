@@ -1,11 +1,37 @@
-
 import streamlit as st
 import pandas as pd
 from pathlib import Path
 
+# --- Config (idéalement en tout premier) ---
 st.set_page_config(page_title="Emploi du temps", layout="wide")
+
+# --- Secrets & verrou d'édition ---
+try:
+    APP_PASSWORD = st.secrets["APP_PASSWORD"]
+except Exception:
+    st.error(
+        "Secret `APP_PASSWORD` introuvable.\n\n"
+        "En local : crée `.streamlit/secrets.toml` avec `APP_PASSWORD=\"edt2025\"`.\n"
+        "Sur Streamlit Cloud : Settings → Secrets → APP_PASSWORD."
+    )
+    st.stop()
+
+if "unlocked" not in st.session_state:
+    st.session_state.unlocked = False
+
+if not st.session_state.unlocked:
+    pwd = st.text_input("Mot de passe", type="password")
+    if pwd:  # on ne montre l'erreur que si l'utilisateur a saisi quelque chose
+        if pwd == APP_PASSWORD:
+            st.session_state.unlocked = True
+            st.success("Édition déverrouillée ✅")
+        else:
+            st.error("Mot de passe incorrect ❌")
+    st.stop()
+
 st.title("📅 Emploi du temps interactif — Semaine par semaine")
 
+# --- Données ---
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
 
@@ -64,8 +90,8 @@ def colored_html_table(df: pd.DataFrame, palette_name: str, font_px: int) -> str
 
     css = f'''
     <style>
-    table.edt{{border-collapse:collapse;width:100%;font-family:system-ui; font-size:{font_px}px;}}
-    table.edt th, table.edt td{{border:1px solid #ddd;padding:8px;text-align:center;vertical-align:middle}}
+    table.edt{{border-collapse:collapse;width:100%;font-family:system-ui;font-size:{font_px}px;}}
+    table.edt th,table.edt td{{border:1px solid #ddd;padding:8px;text-align:center;vertical-align:middle}}
     table.edt thead th{{position:sticky;top:0;background:#fafafa;color:#111}}
     table.edt tbody th{{position:sticky;left:0;background:#fafafa;color:#111}}
     </style>
@@ -75,9 +101,7 @@ def colored_html_table(df: pd.DataFrame, palette_name: str, font_px: int) -> str
     html.append("<thead><tr><th>Heure</th>")
     for j in df.columns:
         html.append(f"<th>{j}</th>")
-    html.append("</tr></thead>")
-
-    html.append("<tbody>")
+    html.append("</tr></thead><tbody>")
     for idx, row in df.iterrows():
         html.append(f"<tr><th>{idx}</th>")
         for val in row:
@@ -88,6 +112,7 @@ def colored_html_table(df: pd.DataFrame, palette_name: str, font_px: int) -> str
     html.append("</tbody></table>")
     return "".join(html)
 
+# --- UI ---
 with st.sidebar:
     st.header("⚙️ Paramètres")
     week_name = st.text_input("Nom de la semaine", value="Semaine 1")
@@ -131,3 +156,4 @@ with st.expander("🎨 Légende des couleurs"):
         "- **Orange**: Court métrage / Club photo  \n"
         "- **Jaune**: RU (repas)"
     )
+
